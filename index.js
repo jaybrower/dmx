@@ -61,7 +61,7 @@ class OpenDmx {
         handleBuffer.writeUintLE(this.handle, 0, 4);
         handleBuffer.type = ref.types.uint;
 
-        this.status = this.binding.FT_Open(1, handleBuffer);
+        this.status = this.binding.FT_Open(0, handleBuffer);
         this.handle = handleBuffer.deref();
     }
 
@@ -73,15 +73,12 @@ class OpenDmx {
         try {
             this.initOpenDmx();
 
-            console.log('this.status:', this.status);
-            console.log('FtStatus.ok:', FtStatus.ok);
-
-            // if (this.status === FtStatus.ok) {
+            if (this.status === FtStatus.ok) {
                 this.binding.FT_SetBreakOn(this.handle);
                 this.binding.FT_SetBreakOff(this.handle);
 
                 this.bytesWritten = this.write(this.handle, this.buffer, this.buffer.length);
-            // }
+            }
         } catch (err) {
             console.error('Failed to write data:', err);
         }
@@ -94,8 +91,6 @@ class OpenDmx {
         let byteWrittenPointer = ref.alloc(this._byteWrittenPointer);
 
         this.status = this.binding.FT_Write(handle, lpBufferPointer, length, byteWrittenPointer);
-
-        console.log('byteWrittenPointer:', byteWrittenPointer);
 
         return byteWrittenPointer.deref();
     }
@@ -114,19 +109,26 @@ class OpenDmx {
 const openDmx = new OpenDmx();
 openDmx.start();
 
-// console.log('status:', openDmx.status);
-// console.log('handle:', openDmx.handle);
-// console.log('buffer:', openDmx.buffer);
-// console.log('bytesWritten:', openDmx.bytesWritten);
+switch (openDmx.status) {
+    case FtStatus.ok: {
+        console.log('Found DMX on USB');
+        console.log('openDmx.handle:', openDmx.handle);
 
-openDmx.setDmxValue(0, 255);
-openDmx.setDmxValue(1, 255);
-openDmx.setDmxValue(2, 255);
-openDmx.setDmxValue(3, 255);
+        openDmx.setDmxValue(0, 255);
+        openDmx.setDmxValue(1, 255);
+        openDmx.setDmxValue(2, 255);
+        openDmx.setDmxValue(3, 255);
 
-openDmx.writeData();
+        openDmx.writeData();
 
-// console.log('status:', openDmx.status);
-// console.log('handle:', openDmx.handle);
-// console.log('buffer:', openDmx.buffer);
-// console.log('bytesWritten:', openDmx.bytesWritten);
+        break;
+    }
+    case FtStatus.deviceNotFound: {
+        console.warn('No Enttec USB device found');
+        break;
+    }
+    default: {
+        console.warn('Error opening device with status of', openDmx.status);
+        break;
+    }
+}
