@@ -1,0 +1,28 @@
+{
+  "name": "dmx",
+  "version": "1.0.0",
+  "description": "Electron application compatible with Enttec DMX USB interface devices for controlling DMX fixtures.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaybrower/dmx.git"
+  },
+  "keywords": [
+    "dmx",
+    "electron",
+    "nodejs"
+  ],
+  "author": "jay.brower.229@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaybrower/dmx/issues"
+  },
+  "homepage": "https://github.com/jaybrower/dmx#readme",
+  "dependencies": {
+    "ffi-napi": "^4.0.3",
+    "ref-napi": "^3.0.3"
+  }
+}
