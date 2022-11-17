@@ -57,10 +57,12 @@ class OpenDmx {
     start() {
         this.handle = 0;
 
-        let handlePointer = ref.alloc(this._handlePointer);
+        let handleBuffer = Buffer.alloc(4);
+        handleBuffer.writeUintLE(this.handle, 0, 4);
+        handleBuffer.type = ref.types.uint;
 
-        this.status = this.binding.FT_Open(0, handlePointer);
-        this.handle = handlePointer.deref();
+        this.status = this.binding.FT_Open(1, handleBuffer);
+        this.handle = handleBuffer.deref();
     }
 
     setDmxValue(channel, value) {
@@ -71,12 +73,15 @@ class OpenDmx {
         try {
             this.initOpenDmx();
 
-            if (this.status === FtStatus.ok) {
+            console.log('this.status:', this.status);
+            console.log('FtStatus.ok:', FtStatus.ok);
+
+            // if (this.status === FtStatus.ok) {
                 this.binding.FT_SetBreakOn(this.handle);
                 this.binding.FT_SetBreakOff(this.handle);
 
                 this.bytesWritten = this.write(this.handle, this.buffer, this.buffer.length);
-            }
+            // }
         } catch (err) {
             console.error('Failed to write data:', err);
         }
@@ -89,6 +94,8 @@ class OpenDmx {
         let byteWrittenPointer = ref.alloc(this._byteWrittenPointer);
 
         this.status = this.binding.FT_Write(handle, lpBufferPointer, length, byteWrittenPointer);
+
+        console.log('byteWrittenPointer:', byteWrittenPointer);
 
         return byteWrittenPointer.deref();
     }
@@ -107,19 +114,19 @@ class OpenDmx {
 const openDmx = new OpenDmx();
 openDmx.start();
 
-console.log('status:', openDmx.status);
-console.log('handle:', openDmx.handle);
-console.log('buffer:', openDmx.buffer);
-console.log('bytesWritten:', openDmx.bytesWritten);
+// console.log('status:', openDmx.status);
+// console.log('handle:', openDmx.handle);
+// console.log('buffer:', openDmx.buffer);
+// console.log('bytesWritten:', openDmx.bytesWritten);
 
+openDmx.setDmxValue(0, 255);
 openDmx.setDmxValue(1, 255);
 openDmx.setDmxValue(2, 255);
 openDmx.setDmxValue(3, 255);
-openDmx.setDmxValue(4, 255);
 
 openDmx.writeData();
 
-console.log('status:', openDmx.status);
-console.log('handle:', openDmx.handle);
-console.log('buffer:', openDmx.buffer);
-console.log('bytesWritten:', openDmx.bytesWritten);
+// console.log('status:', openDmx.status);
+// console.log('handle:', openDmx.handle);
+// console.log('buffer:', openDmx.buffer);
+// console.log('bytesWritten:', openDmx.bytesWritten);
