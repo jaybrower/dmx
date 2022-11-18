@@ -21,9 +21,69 @@ FtStatus.eepromNotProgrammed = 15;
 FtStatus.invalidArgs = 16;
 FtStatus.otherError = 17;
 
+FtStatus.getName = (status) => {
+    switch (status) {
+        case FtStatus.ok: {
+            return 'OK';
+        }
+        case FtStatus.invalidHandle: {
+            return 'Invalid Handle';
+        }
+        case FtStatus.deviceNotFound: {
+            return 'Device Not Found';
+        }
+        case FtStatus.deviceNotOpened: {
+            return 'Device Not Opened';
+        }
+        case FtStatus.ioError: {
+            return 'IO Error';
+        }
+        case FtStatus.insufficientResources: {
+            return 'Insufficient Resources';
+        }
+        case FtStatus.invalidParameter: {
+            return 'Invalid Parameter';
+        }
+        case FtStatus.invalidBaudRate: {
+            return 'Invalid Baud Rate';
+        }
+        case FtStatus.deviceNotOpenedForErase: {
+            return 'Device Not Opened For Erase';
+        }
+        case FtStatus.deviceNotOpenedForWrite: {
+            return 'Device Not Opened For Write';
+        }
+        case FtStatus.failedToWriteDevice: {
+            return 'Failed To Write To Device';
+        }
+        case FtStatus.eepromReadFailed: {
+            return 'EEPROM Read Failed';
+        }
+        case FtStatus.eepromWriteFailed: {
+            return 'EEPROM Write Failed';
+        }
+        case FtStatus.eepromEraseFailed: {
+            return 'EEPROM Erase Failed';
+        }
+        case FtStatus.eepromNotPresent: {
+            return 'EEPROM Not Present';
+        }
+        case FtStatus.eepromNotProgrammed: {
+            return 'EEPROM Not Programmed';
+        }
+        case FtStatus.invalidArgs: {
+            return 'Invalid Args';
+        }
+        case FtStatus.otherError:
+        default: {
+            return 'Other Error';
+        }
+    }
+};
+
 class OpenDmx {
     constructor() {
-        this.buffer = [];
+        this.buffer = new Array(512);
         this.handle = 0;
         this.done = false;
         this.bytesWritten = 0;
@@ -36,13 +96,9 @@ class OpenDmx {
         this.purgeRx = 1;
         this.purgeTx = 2;
 
-        this._handlePointer = ref.refType(ref.types.uint);
-        this._lpBufferPointer = ref.refType(ref.types.int);
-        this._byteWrittenPointer = ref.refType(ref.types.int);
-
         this.binding = ffi.Library('./FTD2XX.dll', {
-            'FT_Open': ['int', ['uint32', this._handlePointer]],
-            'FT_Write': ['int', ['uint', this._lpBufferPointer, 'uint32', this._byteWrittenPointer]],
+            'FT_Open': ['int', ['uint32', ref.refType(ref.types.uint)]],
+            'FT_Write': ['int', ['uint', 'pointer', 'uint32', ref.refType(ref.types.int)]],
             'FT_SetDataCharacteristics': ['int', ['uint', 'byte', 'byte', 'byte']],
             'FT_SetFlowControl': ['int', ['uint', 'char', 'byte', 'byte']],
             'FT_Purge': ['int', ['uint', 'uint32']],
@@ -55,14 +111,10 @@ class OpenDmx {
     }
 
     start() {
-        this.handle = 0;
+        const handlePointer = ref.alloc('uint');
 
-        let handleBuffer = Buffer.alloc(4);
-        handleBuffer.writeUintLE(this.handle, 0, 4);
-        handleBuffer.type = ref.types.uint;
-
-        this.status = this.binding.FT_Open(0, handleBuffer);
-        this.handle = handleBuffer.deref();
+        this.status = this.binding.FT_Open(0, handlePointer);
+        this.handle = handlePointer.deref();
     }
 
     setDmxValue(channel, value) {
@@ -77,20 +129,31 @@ class OpenDmx {
                 this.binding.FT_SetBreakOn(this.handle);
                 this.binding.FT_SetBreakOff(this.handle);
 
-                this.bytesWritten = this.write(this.handle, this.buffer, this.buffer.length);
+                this.bytesWritten = this.write(this.buffer, this.buffer.length);
+
+
+                console.log('this.status:', FtStatus.getName(this.status));
+                console.log('this.bytesWritten:', this.bytesWritten);
+                console.log('----------------------------');
+
+
+            } else {
+                console.log(`Unable to write data because status is "${FtStatus.getName(this.status)}" but needs to be "${FtStatus.getName(FtStatus.ok)}"`);
             }
         } catch (err) {
             console.error('Failed to write data:', err);
         }
     }
 
-    write(handle, data, length) {
-        let lpBufferPointer = ref.alloc(this._lpBufferPointer);
-        lpBufferPointer.copy(data, 0, 0, length);
+    write(data, length) {
+        const dataArray = new Int32Array(data);
+        const dataPointer = Buffer.from(dataArray);
 
-        let byteWrittenPointer = ref.alloc(this._byteWrittenPointer);
+        const byteWrittenPointer = Buffer.alloc(4);
+        byteWrittenPointer.writeUintLE(this.bytesWritten, 0, 4);
+        byteWrittenPointer.type = ref.types.uint;
 
-        this.status = this.binding.FT_Write(handle, lpBufferPointer, length, byteWrittenPointer);
+        this.status = this.binding.FT_Write(this.handle, dataPointer, length, byteWrittenPointer);
 
         return byteWrittenPointer.deref();
     }
@@ -112,14 +175,22 @@ openDmx.start();
 switch (openDmx.status) {
     case FtStatus.ok: {
         console.log('Found DMX on USB');
-        console.log('openDmx.handle:', openDmx.handle);
 
         openDmx.setDmxValue(0, 255);
         openDmx.setDmxValue(1, 255);
         openDmx.setDmxValue(2, 255);
         openDmx.setDmxValue(3, 255);
+        openDmx.setDmxValue(4, 255);
+        openDmx.setDmxValue(5, 255);
+        openDmx.setDmxValue(6, 255);
+        openDmx.setDmxValue(7, 255);
+        openDmx.setDmxValue(8, 255);
+        openDmx.setDmxValue(9, 255);
+        openDmx.setDmxValue(10, 255);
 
-        openDmx.writeData();
+        setInterval(() => {
+            openDmx.writeData();
+        }, 500);
 
         break;
     }
@@ -128,7 +199,7 @@ switch (openDmx.status) {
         break;
     }
     default: {
-        console.warn('Error opening device with status of', openDmx.status);
+        console.warn(`Error opening device with status of "${FtStatus.getName(openDmx.status)}"`);
         break;
     }
 }

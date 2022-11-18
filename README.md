@@ -1,4 +1,6 @@
 # DMX
+_Note: Must be run using 32-bit node because of FTD2XX.dll_
+
 Electron application to use Enttec DMX USB interface devices to control DMX fixtures.
 
 ## Development Resources
