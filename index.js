@@ -148,12 +148,14 @@ class OpenDmx {
     write(data, length) {
         const dataArray = new Int32Array(data);
         const dataPointer = Buffer.from(dataArray);
+        const dataPointerAddress = dataPointer.hexAddress();
+        const dataPointerAddressPointer = ref.alloc(ref.types.int, dataPointerAddress);
 
         const byteWrittenPointer = Buffer.alloc(4);
         byteWrittenPointer.writeUintLE(this.bytesWritten, 0, 4);
         byteWrittenPointer.type = ref.types.uint;
 
-        this.status = this.binding.FT_Write(this.handle, dataPointer, length, byteWrittenPointer);
+        this.status = this.binding.FT_Write(this.handle, dataPointerAddressPointer, length, byteWrittenPointer);
 
         return byteWrittenPointer.deref();
     }
@@ -180,17 +182,10 @@ switch (openDmx.status) {
         openDmx.setDmxValue(1, 255);
         openDmx.setDmxValue(2, 255);
         openDmx.setDmxValue(3, 255);
-        openDmx.setDmxValue(4, 255);
-        openDmx.setDmxValue(5, 255);
-        openDmx.setDmxValue(6, 255);
-        openDmx.setDmxValue(7, 255);
-        openDmx.setDmxValue(8, 255);
-        openDmx.setDmxValue(9, 255);
-        openDmx.setDmxValue(10, 255);
 
         setInterval(() => {
             openDmx.writeData();
-        }, 500);
+        }, 250);
 
         break;
     }
