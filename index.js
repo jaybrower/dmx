@@ -83,7 +83,7 @@ FtStatus.getName = (status) => {
 
 class OpenDmx {
     constructor() {
-        this.buffer = new Array(512);
+        this.buffer = new Uint8Array(513);
         this.handle = 0;
         this.done = false;
         this.bytesWritten = 0;
@@ -98,7 +98,7 @@ class OpenDmx {
 
         this.binding = ffi.Library('./FTD2XX.dll', {
             'FT_Open': ['int', ['uint32', ref.refType(ref.types.uint)]],
-            'FT_Write': ['int', ['uint', 'pointer', 'uint32', ref.refType(ref.types.int)]],
+            'FT_Write': ['int', ['uint', 'CString', 'uint32', ref.refType(ref.types.int)]],
             'FT_SetDataCharacteristics': ['int', ['uint', 'byte', 'byte', 'byte']],
             'FT_SetFlowControl': ['int', ['uint', 'char', 'byte', 'byte']],
             'FT_Purge': ['int', ['uint', 'uint32']],
@@ -115,6 +115,8 @@ class OpenDmx {
 
         this.status = this.binding.FT_Open(0, handlePointer);
         this.handle = handlePointer.deref();
+
+        this.initOpenDmx();
     }
 
     setDmxValue(channel, value) {
@@ -123,22 +125,13 @@ class OpenDmx {
 
     writeData() {
         try {
-            this.initOpenDmx();
-
             if (this.status === FtStatus.ok) {
                 this.binding.FT_SetBreakOn(this.handle);
                 this.binding.FT_SetBreakOff(this.handle);
 
                 this.bytesWritten = this.write(this.buffer, this.buffer.length);
-
-
-                console.log('this.status:', FtStatus.getName(this.status));
-                console.log('this.bytesWritten:', this.bytesWritten);
-                console.log('----------------------------');
-
-
             } else {
-                console.log(`Unable to write data because status is "${FtStatus.getName(this.status)}" but needs to be "${FtStatus.getName(FtStatus.ok)}"`);
+                console.warn(`Unable to write data because status is "${FtStatus.getName(this.status)}" but needs to be "${FtStatus.getName(FtStatus.ok)}"`);
             }
         } catch (err) {
             console.error('Failed to write data:', err);
@@ -146,10 +139,9 @@ class OpenDmx {
     }
 
     write(data, length) {
-        const dataArray = new Int32Array(data);
-        const dataPointer = Buffer.from(dataArray);
-        const dataPointerAddress = dataPointer.hexAddress();
-        const dataPointerAddressPointer = ref.alloc(ref.types.int, dataPointerAddress);
+        const dataPointer = Buffer.from(data);
+        const dataPointerAddress = '0x' + dataPointer.hexAddress();
+        const dataPointerAddressPointer = ref.alloc(ref.types.CString, dataPointerAddress);
 
         const byteWrittenPointer = Buffer.alloc(4);
         byteWrittenPointer.writeUintLE(this.bytesWritten, 0, 4);
@@ -178,10 +170,10 @@ switch (openDmx.status) {
     case FtStatus.ok: {
         console.log('Found DMX on USB');
 
-        openDmx.setDmxValue(0, 255);
         openDmx.setDmxValue(1, 255);
         openDmx.setDmxValue(2, 255);
         openDmx.setDmxValue(3, 255);
+        openDmx.setDmxValue(4, 255);
 
         setInterval(() => {
             openDmx.writeData();
