@@ -139,9 +139,17 @@ class OpenDmx {
     }
 
     write(data, length) {
-        const dataPointer = Buffer.from(data);
-        const dataPointerAddress = '0x' + dataPointer.hexAddress();
-        const dataPointerAddressPointer = ref.alloc(ref.types.CString, dataPointerAddress);
+        // const dataPointer = Buffer.from(data);
+        // const dataPointerAddress = '0x' + dataPointer.hexAddress();
+        // const dataPointerAddressPointer = ref.alloc(ref.types.CString, dataPointerAddress);
+
+        // const dataPointer = '0x' + Buffer.from(data).toString('hex');
+        // const dataPointerAddressPointer = ref.alloc(ref.types.CString, dataPointer);
+
+        const dataPointerAddressPointer = ref.allocCString('[0,255,255]');
+
+        // console.log('data:', data);
+        // console.log('dataPointer:', dataPointer);
 
         const byteWrittenPointer = Buffer.alloc(4);
         byteWrittenPointer.writeUintLE(this.bytesWritten, 0, 4);
@@ -170,14 +178,14 @@ switch (openDmx.status) {
     case FtStatus.ok: {
         console.log('Found DMX on USB');
 
-        openDmx.setDmxValue(1, 255);
-        openDmx.setDmxValue(2, 255);
-        openDmx.setDmxValue(3, 255);
-        openDmx.setDmxValue(4, 255);
+        openDmx.setDmxValue(1, 150);
+        openDmx.setDmxValue(2, 150);
+        openDmx.setDmxValue(3, 150);
+        openDmx.setDmxValue(4, 150);
 
         setInterval(() => {
             openDmx.writeData();
-        }, 250);
+        }, 10);
 
         break;
     }
