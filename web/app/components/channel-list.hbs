@@ -1,0 +1,13 @@
+<ul>
+    {{#each @channelValues as |channelValue index|}}
+        <li>
+            <input
+                max="255"
+                min="0"
+                type="range"
+                value={{channelValue}}
+                {{on 'change' (fn this.changeChannelValue index)}}
+            />
+        </li>
+    {{/each}}
+</ul>
