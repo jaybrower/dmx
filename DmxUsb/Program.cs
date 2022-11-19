@@ -49,6 +49,7 @@ namespace DmxUsb
                     try
                     {
                         OpenDmx.writeData();
+                        Thread.Sleep(50);
                     }
                     catch (Exception ex)
                     {
@@ -77,12 +78,27 @@ namespace DmxUsb
 
                         // Files should be named in milliseconds based on their
                         // timestamp so we want the earlier file.
-                        var file = queueFiles
+                        var fileMilliseconds = queueFiles
                             .ToList()
-                            .OrderBy(fileName => fileName)
+                            .Select(fileName =>
+                            {
+                                if (long.TryParse(fileName.Split('\\').Last(), out var milliseconds))
+                                {
+                                    return milliseconds;
+                                }
+
+                                return long.MaxValue;
+                            })
+                            .OrderBy(milliseconds => milliseconds)
                             .First();
 
-                        var filePath = Path.Combine(queuePath, file);
+                        // Ignore files that should be executed in the future.
+                        if (fileMilliseconds > DateTimeOffset.Now.ToUnixTimeMilliseconds())
+                        {
+                            continue;
+                        }
+
+                        var filePath = Path.Combine(queuePath, fileMilliseconds.ToString());
                         var text = File.ReadAllText(filePath);
 
                         // If the file is empty we should delete it and move to the next.
@@ -118,6 +134,8 @@ namespace DmxUsb
                         // Set the DMX channel values and delete the file.
                         OpenDmx.setDmxValues(byteArray);
                         File.Delete(filePath);
+
+                        Thread.Sleep(100);
                     }
                     catch (Exception ex)
                     {
