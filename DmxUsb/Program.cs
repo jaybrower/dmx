@@ -1,46 +1,146 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
 
 namespace DmxUsb
 {
     class Program
     {
+        static string QueueDirectorEnvVar = "DMX_USB_QUEUE_DIRECTORY";
+
+        static Thread ReadQueueThread = null;
+        static Thread WriteDataThread = null;
+
         static void Main(string[] args)
         {
             OpenDmx.start();
 
             switch (OpenDmx.status)
             {
-                case Status.FT_DEVICE_NOT_FOUND:
-                    Console.WriteLine("No Enttec USB device found.");
-                    break;
                 case Status.FT_OK:
                     Console.WriteLine("Enttec USB device found.");
                     break;
+                case Status.FT_DEVICE_NOT_FOUND:
+                    Console.WriteLine("No Enttec USB device found.");
+                    return;
                 default:
                     Console.WriteLine("Error opening Enttec USB device.");
-                    break;
+                    return;
             }
 
-            Console.Write("DMX Channel Values: ");
-            var bytesInput = Console.ReadLine();
-
-            var index = 1;
-            foreach (var byteInput in bytesInput.Split(','))
+            var queuePath = Environment.GetEnvironmentVariable(QueueDirectorEnvVar, EnvironmentVariableTarget.User);
+            try
             {
-                if (!byte.TryParse(byteInput, out var byteValue))
-                {
-                    byteValue = 0;
-                }
-
-                OpenDmx.setDmxValue(index, byteValue);
-
-                index++;
+                Path.GetFullPath(queuePath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Queue path defined by \"{QueueDirectorEnvVar}\" env variable is invalid: {ex.Message}");
+                Console.Write("Press any key to exit.");
+                Console.Read();
+                return;
             }
 
-            OpenDmx.writeData();
+            WriteDataThread = new Thread(() =>
+            {
+                do
+                {
+                    try
+                    {
+                        OpenDmx.writeData();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Writing data to DMX USB interface failed: {ex.Message}");
+                    }
+                }
+                while (true);
+            });
+            WriteDataThread.IsBackground = true;
+            WriteDataThread.Start();
 
-            Console.ReadLine();
+            ReadQueueThread = new Thread(() =>
+            {
+                do
+                {
+                    try
+                    {
+                        var queueFiles = Directory.GetFiles(queuePath);
+
+                        // Wait for files to be added to the queue.
+                        if (queueFiles.Length == 0)
+                        {
+                            Thread.Sleep(500);
+                            continue;
+                        }
+
+                        // Files should be named in milliseconds based on their
+                        // timestamp so we want the earlier file.
+                        var file = queueFiles
+                            .ToList()
+                            .OrderBy(fileName => fileName)
+                            .First();
+
+                        var filePath = Path.Combine(queuePath, file);
+                        var text = File.ReadAllText(filePath);
+
+                        // If the file is empty we should delete it and move to the next.
+                        if (string.IsNullOrWhiteSpace(text))
+                        {
+                            File.Delete(filePath);
+                            continue;
+                        }
+
+                        // Parse the file data and create an array to update the DMX
+                        // channel values.
+                        var values = text.Split(',');
+
+                        var byteArray = CreateNewChannelByteArray();
+                        var index = 0;
+                        foreach (var value in values)
+                        {
+                            if (index >= byteArray.Length)
+                            {
+                                break;
+                            }
+
+                            if (!byte.TryParse(value, out var byteValue))
+                            {
+                                index++;
+                                continue;
+                            }
+
+                            byteArray[index] = byteValue;
+                            index++;
+                        }
+
+                        // Set the DMX channel values and delete the file.
+                        OpenDmx.setDmxValues(byteArray);
+                        File.Delete(filePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Reading from and applying queue failed: {ex.Message}");
+                    }
+                }
+                while (true);
+            });
+            ReadQueueThread.IsBackground = true;
+            ReadQueueThread.Start();
+
+            Console.Read();
+        }
+
+        static byte[] CreateNewChannelByteArray()
+        {
+            var byteArray = new byte[512];
+            for (var i = 0; i < 512; i++)
+            {
+                byteArray[i] = 0;
+            }
+
+            return byteArray;
         }
     }
 }

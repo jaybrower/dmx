@@ -20,10 +20,5 @@
   "bugs": {
     "url": "https://github.com/jaybrower/dmx/issues"
   },
-  "homepage": "https://github.com/jaybrower/dmx#readme",
-  "dependencies": {
-    "ffi-napi": "^4.0.3",
-    "ref-napi": "^3.0.3",
-    "usb": "^2.5.2"
-  }
+  "homepage": "https://github.com/jaybrower/dmx#readme"
 }

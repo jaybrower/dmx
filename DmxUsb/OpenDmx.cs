@@ -67,7 +67,20 @@ namespace DmxUsb
         {
             if (buffer != null)
             {
-                buffer[channel] = value;
+                buffer[channel + 1] = value;
+            }
+        }
+
+        public static void setDmxValues(byte[] values)
+        {
+            if (buffer != null)
+            {
+                var index = 1;
+                foreach (var value in values)
+                {
+                    buffer[index] = value;
+                    index++;
+                }
             }
         }
 
